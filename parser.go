@@ -6,13 +6,16 @@ import (
 	"os"
 )
 
+var memory = make([]byte, 30000)
+var index int = 0
+
 var loopStart []int
 var maxIndex int = 0
 var tempLoop int
 
 func Parse(lexTokens []ParseToken) {
 	for i, t := range lexTokens {
-		fmt.Print(t.Lit)
+		//fmt.Print(t.Lit)
 		switch t.Tok {
 		case EOF:
 			return

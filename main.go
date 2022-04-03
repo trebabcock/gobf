@@ -6,11 +6,15 @@ import (
 	"os"
 )
 
-var memory = make([]byte, 30000)
-var index int = 0
-
 func main() {
-	file, err := os.Open("hw.bf")
+	if len(os.Args) < 2 {
+		log.Fatal("Please specify a file")
+	}
+	if len(os.Args) > 2 {
+		log.Fatal("Too many arguments\nUsage: gobf <file_name>")
+	}
+
+	file, err := os.Open(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
