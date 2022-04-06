@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"io"
+	"log"
 )
 
 type Token int
@@ -67,7 +68,7 @@ func (l *Lexer) Lex() (Position, Token, string) {
 			if err == io.EOF {
 				return l.Pos, EOF, "EOF"
 			}
-			panic(err)
+			log.Fatal(err)
 		}
 		l.Pos.Column++
 

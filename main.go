@@ -23,7 +23,7 @@ func main() {
 	if !CheckBrackets(lexTokens) {
 		log.Fatal("Mismatched brackets")
 	}
-	Parse(lexTokens)
+	Parse(lexTokens, 0)
 }
 
 func startLex(file io.Reader) []ParseToken {

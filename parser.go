@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
+
+	. "github.com/logrusorgru/aurora/v3"
 )
 
 var memory = make([]byte, 30000)
@@ -11,11 +14,10 @@ var index int = 0
 
 var loopStart []int
 var maxIndex int = 0
-var tempLoop int
 
-func Parse(lexTokens []ParseToken) {
-	for i, t := range lexTokens {
-		//fmt.Print(t.Lit)
+func Parse(lexTokens []ParseToken, startIndex int) {
+	loop := lexTokens[startIndex : len(lexTokens)-1]
+	for i, t := range loop {
 		switch t.Tok {
 		case EOF:
 			return
@@ -40,35 +42,24 @@ func Parse(lexTokens []ParseToken) {
 			memory[index]--
 		case LEFT_BRACKET:
 			if memory[index] == 0 {
-				lb := 0
-				for j, tok := range lexTokens[i+1 : len(lexTokens)-1] {
-					if tok.Tok == LEFT_BRACKET {
-						lb += 1
-					}
-					if tok.Tok == RIGHT_BRACKET {
-						if lb == 0 {
-							defer Parse(lexTokens[j+1 : len(lexTokens)-1])
-							return
-						} else {
-							lb -= 1
-						}
-					}
+				skipTo, err := FindRightMatch(lexTokens, startIndex+i)
+				if err != nil {
+					HandleError(err, lexTokens, startIndex+i)
 				}
-			} else {
-				loopStart = append(loopStart, i+1)
+				Parse(lexTokens, skipTo+1)
+				return
 			}
 		case RIGHT_BRACKET:
 			if memory[index] != 0 {
-				tempLoop = loopStart[len(loopStart)-1]
-				defer Parse(lexTokens[tempLoop : len(lexTokens)-1])
-				return
-			} else {
-				if len(loopStart) > 0 {
-					loopStart = loopStart[:len(loopStart)-1]
+				loopStart, err := FindLeftMatch(lexTokens, startIndex+i)
+				if err != nil {
+					HandleError(err, lexTokens, startIndex+i)
 				}
+				Parse(lexTokens, loopStart+1)
+				return
 			}
 		case COMMA:
-			fmt.Print("\nEnter a character: ")
+			fmt.Print("\n> ")
 			scanner := bufio.NewScanner(os.Stdin)
 			scanner.Scan()
 			text := scanner.Text()[0]
@@ -92,6 +83,56 @@ func Parse(lexTokens []ParseToken) {
 			fmt.Print("^\n")
 		}
 	}
+	return
+}
+
+func HandleError(err error, lexTokens []ParseToken, currentIndex int) {
+	if err != nil {
+		fmt.Printf("\nERROR: %s\n", err.Error())
+		for i, t := range lexTokens {
+			if i < currentIndex {
+				fmt.Print(Green(t.Lit))
+			} else if i == currentIndex {
+				fmt.Print(Red(fmt.Sprintf("%s", t.Lit)))
+			} else {
+				fmt.Print(t.Lit)
+			}
+		}
+		fmt.Print("\n")
+	}
+	os.Exit(1)
+}
+
+func FindRightMatch(lexTokens []ParseToken, currentIndex int) (int, error) {
+	lb := 0
+	for i, tok := range lexTokens[currentIndex+1 : len(lexTokens)-1] {
+		if tok.Tok == LEFT_BRACKET {
+			lb += 1
+		}
+		if tok.Tok == RIGHT_BRACKET {
+			if lb == 0 {
+				return i, nil
+			}
+			lb -= 1
+		}
+	}
+	return 0, errors.New(fmt.Sprintf("No matching right bracket\nlb = %d", lb))
+}
+
+func FindLeftMatch(lexTokens []ParseToken, currentIndex int) (int, error) {
+	rb := 0
+	for i := currentIndex - 1; i >= 0; i-- {
+		if lexTokens[i].Lit == "]" {
+			rb += 1
+		}
+		if lexTokens[i].Lit == "[" {
+			if rb == 0 {
+				return i, nil
+			}
+			rb -= 1
+		}
+	}
+	return 0, errors.New(fmt.Sprintf("No matching left bracket\nrb = %d", rb))
 }
 
 func CheckBrackets(lexTokens []ParseToken) bool {
